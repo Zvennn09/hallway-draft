@@ -46,10 +46,10 @@ public class FPSController : MonoBehaviour
         Vector3 forward = transform.TransformDirection(Vector3.forward);
         Vector3 right = transform.TransformDirection(Vector3.right);
 
+        // Press Left Shift to run
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
         float curSpeedX = canMove ? (isRunning ? runSpeed : walkSpeed) * Input.GetAxis("Vertical") : 0;
         float curSpeedY = canMove ? (isRunning ? runSpeed : walkSpeed) * Input.GetAxis("Horizontal") : 0;
-
         float movementDirectionY = moveDirection.y;
         moveDirection = (forward * curSpeedX) + (right * curSpeedY);
         #endregion
@@ -83,8 +83,34 @@ public class FPSController : MonoBehaviour
     }
 
     /// <summary>
+    /// Forces the player body and camera pitch to align with a target rotation seamlessly.
+    /// This removes the sudden frame twitch/snap during teleportation loops.
+    /// </summary>
+    public void SyncOrientation(Quaternion targetRotation)
+    {
+        // Overwrite the player capsule transform direction
+        transform.rotation = targetRotation;
+        
+        // Zero out mouse look pitch tracker to align with the new hallway's flat horizontal path
+        rotationX = 0f;
+        
+        if (playerCamera != null)
+        {
+            playerCamera.transform.localRotation = Quaternion.identity;
+        }
+    }
+
+    /// <summary>
+    /// Resets movement direction vectors to zero.
+    /// Useful to halt unexpected velocity or physics momentum during loop changes.
+    /// </summary>
+    public void ResetMovement()
+    {
+        moveDirection = Vector3.zero;
+    }
+
+    /// <summary>
     /// Resets the camera vertical pitch to zero.
-    /// Call this after teleporting so the player doesn't stare at the floor/ceiling.
     /// </summary>
     public void ResetCameraRotation()
     {
@@ -92,16 +118,7 @@ public class FPSController : MonoBehaviour
         if (playerCamera != null)
             playerCamera.transform.localRotation = Quaternion.identity;
 
-        // Re-lock cursor in case it got released
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-    }
-
-    /// <summary>
-    /// Resets movement direction so player doesn't freeze after teleporting.
-    /// </summary>
-    public void ResetMovement()
-    {
-        moveDirection = Vector3.zero;
     }
 }

@@ -1,45 +1,83 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using System.Collections;
 
 public class NewPlayerTeleporter : MonoBehaviour
 {
-    [Header("Scene To Load")]
-    public string targetSceneName;
+    public enum PortalType { EndPortalForward, StartPortalBack }
+    
+    [Header("Portal Identity")]
+    public PortalType portalType;
 
-    [Header("Spawn Offset in next scene (tweak if player clips into wall)")]
-    public Vector3 spawnOffset = new Vector3(0, 0, 1f);
-
-    [Header("Cooldown Settings")]
-    public float teleportCooldown = 1.5f;
-
-    private static bool isOnCooldown = false;
+    [Header("Seamless Destination")]
+    [Tooltip("Drag the STARTING SPAWN ANCHOR (Transform) of the NEXT level that this portal should seamlessly send the player to.")]
+    public Transform targetDestination;
 
     private void OnTriggerEnter(Collider other)
     {
-        if (isOnCooldown) return;
-        if (!other.CompareTag("Player")) return;
+        if (other.CompareTag("Player"))
+        {
+            if (GameLoopManager.Instance == null) return;
 
-        StartCoroutine(TeleportToScene(other));
+            // Cooldown Check: Ignore collision completely if it happens too fast
+            if (!GameLoopManager.Instance.CanTeleport()) return;
+
+            // 1. Perform the Seamless Teleport Math first
+            ExecuteSeamlessWarp(other.gameObject);
+
+            // 2. Report the action to the Game Loop Manager to update the scores/levels
+            ExecuteGameFlowRouting();
+        }
     }
 
-    private IEnumerator TeleportToScene(Collider other)
+    private void ExecuteSeamlessWarp(GameObject player)
     {
-        isOnCooldown = true;
-
-        // Save player's position and rotation into PlayerData
-        if (PlayerData.Instance != null)
+        if (targetDestination == null)
         {
-            // Offset pushes them slightly forward so they don't re-trigger
-            PlayerData.Instance.spawnPosition = other.transform.position
-                                              + other.transform.TransformDirection(spawnOffset);
-            PlayerData.Instance.spawnRotation = other.transform.rotation;
-            PlayerData.Instance.hasCustomSpawn = true;
+            Debug.LogWarning($"[Teleporter] Target Destination is missing on {gameObject.name}!");
+            return;
         }
 
-        yield return null;
+        CharacterController playerController = player.GetComponent<CharacterController>();
+        FPSController fps = player.GetComponent<FPSController>();
 
-        // Load the next scene
-        SceneManager.LoadScene(targetSceneName);
+        if (playerController != null)
+        {
+            // Calculate how far off-center the player is from THIS portal's position
+            Vector3 relativePosition = player.transform.position - transform.position;
+
+            // Temporarily turn off character controller physics to allow moving coordinates directly
+            playerController.enabled = false;
+
+            // Place the player at the exact same relative offset at the target destination
+            player.transform.position = targetDestination.position + relativePosition;
+
+            // Synchronize look direction angles cleanly
+            if (fps != null)
+            {
+                fps.SyncOrientation(targetDestination.rotation);
+            }
+            else
+            {
+                player.transform.rotation = targetDestination.rotation;
+            }
+
+            // ANTI-FLICKER FIX: Force Unity to completely update its internal physics matrix 
+            // right now before rendering the next visual frame.
+            Physics.SyncTransforms();
+
+            // Turn physics back on safely
+            playerController.enabled = true;
+        }
+    }
+
+    private void ExecuteGameFlowRouting()
+    {
+        if (portalType == PortalType.EndPortalForward)
+        {
+            GameLoopManager.Instance.PlayerWalkedForward();
+        }
+        else if (portalType == PortalType.StartPortalBack)
+        {
+            GameLoopManager.Instance.PlayerTurnedBack();
+        }
     }
 }
