@@ -1206,11 +1206,7 @@ MeshCollider:
   serializedVersion: 4
   m_Convex: 0
   m_CookingOptions: 30
-<<<<<<< Updated upstream
-  m_Mesh: {fileID: 1186348024}
-=======
   m_Mesh: {fileID: 857274604}
->>>>>>> Stashed changes
 --- !u!33 &4328792
 MeshFilter:
   m_ObjectHideFlags: 10
@@ -1222,11 +1218,7 @@ MeshFilter:
   m_Mesh: {fileID: 1186348024}
 =======
   m_Mesh: {fileID: 857274604}
->>>>>>> Stashed changes
---- !u!23 &4328793
-MeshRenderer:
   m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4328789}
